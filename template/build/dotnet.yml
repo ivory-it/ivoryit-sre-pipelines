@@ -1,0 +1,50 @@
+trigger:
+  branches:
+    include:
+    - develop
+    - homolog
+    - main
+jobs:
+- job: Job_1
+  displayName: Agent job 1
+  pool:
+    vmImage: ubuntu-latest
+  steps:
+  - task: UseDotNet@2
+    inputs:
+      version: '8.x'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'dotnet restore'
+    inputs:
+      command: restore
+      projects: '**/*.sln'
+      restoreArguments: '--interactive --force'
+      feedsToUse: config
+      noCache: true
+      verbosityRestore: Detailed
+
+  - task: DotNetCoreCLI@2
+    displayName: "Dotnet Build"
+    inputs:
+      command: 'build'
+      projects: '**/*.sln' 
+      arguments: '--no-restore --configuration $(BuildConfiguration)'
+
+  - task: DotNetCoreCLI@2
+    displayName: "Dotnet Test"
+    inputs:
+      command: 'test'
+      projects: '**/*.sln' 
+      arguments: '--no-restore --no-build --configuration $(BuildConfiguration) --collect "Code Coverage"'
+
+  - task: DotNetCoreCLI@2
+    displayName: "Dotnet Publish"
+    inputs:
+      command: 'publish'
+      publishWebProjects: false
+      projects: '**/src/PlatformServices/Api/Api.csproj'
+      arguments: '--no-restore --no-build --configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: drop'
